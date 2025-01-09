@@ -1,27 +1,26 @@
 #![allow(unused)]
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Default)]
 #[repr(align(8))]
 pub struct Board([u8; 6]);
 
 impl Board {
-    #[inline]
     fn is_empty(&self) -> bool {
-        // Code is optimized for performance, but might break if we
-        // change the board struct.
         u64::from(*self) == 0
     }
 }
 
 impl From<Board> for u64 {
-    #[inline]
     fn from(value: Board) -> Self {
+        // Code is optimized for performance, but might break if we
+        // change the board struct.
         let mut buffer = [0u8; 8];
         buffer[..6].copy_from_slice(&value.0);
         u64::from_ne_bytes(buffer)
     }
 }
 
+#[derive(Default)]
 pub struct Game {
     boards: [Board; 2],
     points: [u8; 2],
@@ -41,7 +40,15 @@ impl Game {
 
     #[inline]
     pub fn play(&mut self, player: usize, cell: usize) {
-        debug_assert!(player < 2 && cell < 6);
+        // Debuggging stuff.
+        debug_assert!(player < 2);
+        if cfg!(debug_assertions) {
+            if self.boards[player].is_empty() {
+                debug_assert!((6..12).contains(&cell));
+            } else {
+                debug_assert!(cell < 6);
+            }
+        }
 
         todo!();
     }

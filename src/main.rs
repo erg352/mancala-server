@@ -1,85 +1,65 @@
-#![allow(unused)]
+use std::net::{Ipv4Addr, SocketAddr};
 
-use axum::{
-    debug_handler,
-    extract::{Query, State},
-    http::StatusCode,
-    response::IntoResponse,
-    routing::get,
-    Router,
-};
+use tracing::error;
+
+use match_server::server;
+
+use axum::Router;
 use clap::Parser;
-use reqwest::Client;
-use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use thiserror::Error;
-use tokio::{net::TcpListener, sync::RwLock};
+use tokio::net::TcpListener;
 use tower_http::trace::TraceLayer;
 
 mod cli;
-
-#[derive(Clone, Default)]
-struct AppState {}
 
 #[tokio::main]
 async fn main() {
     let args = cli::Args::parse();
 
     tracing_subscriber::fmt()
+        // TODO: Add a argument to the cli tool to change the log level.
         .with_max_level(tracing::Level::TRACE)
         .init();
 
-    let address = std::net::Ipv4Addr::LOCALHOST;
-    let port = args.port;
-    let listener = TcpListener::bind((address, port)).await.unwrap();
+    let state = server::app_state::AppState::default();
 
-    let state = AppState::default();
+    let address: SocketAddr = (Ipv4Addr::LOCALHOST, args.port).into();
+
+    let listener = match TcpListener::bind(address).await {
+        Ok(listener) => listener,
+        Err(error) => {
+            error!("Aborting, could not bind to address {address} due to following error: {error}");
+            std::process::exit(1);
+        }
+    };
 
     let routes = Router::new()
-        .route("/register", get(register_bot))
+        .with_state(state.clone())
+        .nest("/register", server::registering::routes(state.clone()))
         .fallback(|| async { "Invalid page" })
-        .layer(TraceLayer::new_for_http())
-        .with_state(state);
+        .layer(TraceLayer::new_for_http());
 
-    axum::serve(listener, routes).await.unwrap();
-}
-
-#[derive(Deserialize)]
-struct RegisterBotPayload {
-    name: String,
-    port: u16,
-}
-
-#[derive(Error, Debug)]
-enum RegisterBotError {
-    #[error("a bot is already registered at this port")]
-    PortTaken,
-    #[error("a bot is already registered with this name")]
-    NameTaken,
-}
-
-impl IntoResponse for RegisterBotError {
-    fn into_response(self) -> axum::response::Response {
-        (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response()
+    tokio::select! {
+        _ = run_matches(state) => {},
+        server_result = axum::serve(listener, routes) => {
+            if let Err(error) = server_result {
+                error!("Error whilst running server: {}", error);
+            }
+        }
     }
 }
 
-#[derive(Error, Debug)]
-enum PlayError {
-    #[error("out of bounds")]
-    OutOfBounds,
-    #[error("no stone at given index")]
-    NoStoneAtIndex,
-    #[error("invalid json response: {0}")]
-    InvalidJsonResponse(#[from] reqwest::Error),
-}
+// #[derive(Error, Debug)]
+// enum PlayError {
+//     #[error("out of bounds")]
+//     OutOfBounds,
+//     #[error("no stone at given index")]
+//     NoStoneAtIndex,
+//     #[error("invalid json response: {0}")]
+//     InvalidJsonResponse(#[from] reqwest::Error),
+// }
 
-#[debug_handler]
-async fn register_bot(
-    State(state): State<AppState>,
-    Query(payload): Query<RegisterBotPayload>,
-) -> Result<(), RegisterBotError> {
-    Ok(())
+async fn run_matches(state: server::app_state::AppState) {
+    todo!()
 }
 
 /*

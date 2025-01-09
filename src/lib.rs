@@ -1,1 +1,2 @@
-mod mancala;
+pub mod mancala;
+pub mod server;
