@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    net::SocketAddr,
+    sync::{Arc, Mutex},
+};
 
 use reqwest::Client;
 
@@ -6,12 +9,19 @@ use crate::mancala::Game;
 
 pub struct Match {
     pub game: Game,
-    pub ports: (u16, u16),
+    pub bots: (Bot, Bot),
+}
+
+#[derive(Clone)]
+#[allow(unused)]
+pub struct Bot {
+    name: Arc<str>,
+    address: SocketAddr,
 }
 
 #[derive(Clone)]
 pub struct AppState {
-    pub players: Arc<Mutex<Vec<u16>>>,
+    pub bots: Arc<Mutex<Vec<Bot>>>,
     pub matches: Arc<Mutex<Vec<Mutex<Match>>>>,
 
     // For sending messages to clients
@@ -23,7 +33,7 @@ pub struct AppState {
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            players: Default::default(),
+            bots: Default::default(),
             matches: Default::default(),
             client: Default::default(),
             database: Arc::new(Mutex::new(open_database())),

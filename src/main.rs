@@ -7,7 +7,7 @@ use match_server::server;
 use axum::Router;
 use clap::Parser;
 use tokio::net::TcpListener;
-use tower_http::trace::TraceLayer;
+use tower_http::{services::ServeDir, trace::TraceLayer};
 
 mod cli;
 
@@ -17,7 +17,7 @@ async fn main() {
 
     tracing_subscriber::fmt()
         // TODO: Add a argument to the cli tool to change the log level.
-        .with_max_level(tracing::Level::TRACE)
+        .with_max_level(args.log)
         .init();
 
     let state = server::app_state::AppState::default();
@@ -32,10 +32,12 @@ async fn main() {
         }
     };
 
+    let static_dir = ServeDir::new("static");
     let routes = Router::new()
         .with_state(state.clone())
-        .nest("/login", server::login::routes(state.clone()))
-        .fallback(|| async { "Invalid page" })
+        .nest("/api/login", server::login::routes(state.clone()))
+        .nest("/api/display", server::display::routes(state.clone()))
+        .fallback_service(static_dir)
         .layer(TraceLayer::new_for_http());
 
     tokio::select! {
