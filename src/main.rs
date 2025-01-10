@@ -40,7 +40,7 @@ async fn main() {
 
     tokio::select! {
         _ = run_matches(state) => {},
-        server_result = axum::serve(listener, routes) => {
+        server_result = axum::serve(listener, routes.into_make_service_with_connect_info::<SocketAddr>()) => {
             if let Err(error) = server_result {
                 error!("Error whilst running server: {}", error);
             }

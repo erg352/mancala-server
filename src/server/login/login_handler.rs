@@ -6,7 +6,7 @@ use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use axum::{
     debug_handler,
     extract::{ConnectInfo, Query, State},
-    response::{Html, IntoResponse},
+    response::IntoResponse,
 };
 use reqwest::StatusCode;
 use rusqlite::{params, OptionalExtension};
