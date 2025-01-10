@@ -22,7 +22,7 @@ async fn main() {
 
     let state = server::app_state::AppState::default();
 
-    let address: SocketAddr = (Ipv4Addr::LOCALHOST, args.port).into();
+    let address = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), args.port);
 
     let listener = match TcpListener::bind(address).await {
         Ok(listener) => listener,

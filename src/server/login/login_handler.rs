@@ -18,21 +18,21 @@ pub(super) async fn login(
     State(state): State<AppState>,
     Query(payload): Query<LoginBotPayload>,
     ConnectInfo(_address): ConnectInfo<SocketAddr>,
-) -> Result<Html<String>, LoginBotError> {
+) -> Result<(), LoginBotError> {
     let connection = state.database.lock().unwrap();
 
-    let query: Option<(String, String, usize)> = connection
+    let query: Option<String> = connection
         .query_row(
-            "SELECT name, password, elo FROM bots WHERE name = ?1",
+            "SELECT password, FROM bots WHERE name = ?1",
             params![payload.name],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
+            |row| row.get(0),
         )
         .optional()?;
 
     match query {
         None => Err(LoginBotError::InvalidName),
 
-        Some((name, hashed_password, elo)) => {
+        Some(hashed_password) => {
             let parsed_hash = PasswordHash::new(&hashed_password)?;
             if Argon2::default()
                 .verify_password(payload.password.as_bytes(), &parsed_hash)
@@ -42,9 +42,7 @@ pub(super) async fn login(
                 return Err(LoginBotError::InvalidPassword);
             }
 
-            Ok(Html(format!(
-                "{name} has an elo of <strong>{elo}</strong>!"
-            )))
+            Ok(())
         }
     }
 }
