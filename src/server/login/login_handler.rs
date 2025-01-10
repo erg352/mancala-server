@@ -29,22 +29,18 @@ pub(super) async fn login(
         )
         .optional()?;
 
-    match query {
-        None => Err(LoginBotError::InvalidName),
+    let hashed_password = query.ok_or(LoginBotError::InvalidName)?;
 
-        Some(hashed_password) => {
-            let parsed_hash = PasswordHash::new(&hashed_password)?;
-            if Argon2::default()
-                .verify_password(payload.password.as_bytes(), &parsed_hash)
-                .ok()
-                .is_none()
-            {
-                return Err(LoginBotError::InvalidPassword);
-            }
-
-            Ok(())
-        }
+    let parsed_hash = PasswordHash::new(&hashed_password)?;
+    if Argon2::default()
+        .verify_password(payload.password.as_bytes(), &parsed_hash)
+        .ok()
+        .is_none()
+    {
+        return Err(LoginBotError::InvalidPassword);
     }
+
+    Ok(())
 }
 
 #[derive(Deserialize)]
