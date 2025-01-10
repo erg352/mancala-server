@@ -23,7 +23,7 @@ pub(super) async fn login(
 
     let query: Option<String> = connection
         .query_row(
-            "SELECT password, FROM bots WHERE name = ?1",
+            "SELECT password FROM bots WHERE name = ?1",
             params![payload.name],
             |row| row.get(0),
         )
