@@ -34,7 +34,7 @@ async fn main() {
 
     let routes = Router::new()
         .with_state(state.clone())
-        .nest("/register", server::registering::routes(state.clone()))
+        .nest("/login", server::login::routes(state.clone()))
         .fallback(|| async { "Invalid page" })
         .layer(TraceLayer::new_for_http());
 
@@ -58,8 +58,10 @@ async fn main() {
 //     InvalidJsonResponse(#[from] reqwest::Error),
 // }
 
-async fn run_matches(state: server::app_state::AppState) {
-    todo!()
+async fn run_matches(_state: server::app_state::AppState) {
+    loop {
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+    }
 }
 
 /*

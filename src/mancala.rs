@@ -1,6 +1,9 @@
 #![allow(unused)]
 
-#[derive(Clone, Copy, Default)]
+use reqwest::Client;
+use serde::Serialize;
+
+#[derive(Clone, Copy, Default, Serialize)]
 #[repr(align(8))]
 pub struct Board([u8; 6]);
 
@@ -51,5 +54,36 @@ impl Game {
         }
 
         todo!();
+    }
+}
+
+impl Game {
+    fn to_json(&self, player: usize) -> String {
+        debug_assert!(player < 2);
+
+        #[derive(Serialize)]
+        struct SerializableGame {
+            boards: [Board; 2],
+            points: [u8; 2],
+        }
+
+        serde_json::to_string(&SerializableGame {
+            boards: [self.boards[player], self.boards[1 - player]],
+            points: [self.points[player], self.points[1 - player]],
+        })
+        .unwrap()
+    }
+
+    pub async fn send_game_to_player(&self, client: Client, player: usize, port: u16) {
+        debug_assert!(player < 2);
+
+        let serialized = self.to_json(player);
+        let response = client
+            .get(format!("localhost:{port}/next_move"))
+            .body(serialized)
+            .header(reqwest::header::CONTENT_TYPE, "application/json")
+            .send()
+            .await
+            .unwrap();
     }
 }
