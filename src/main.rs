@@ -2,7 +2,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 
 use tracing::error;
 
-use match_server::server;
+use match_server::server::{self, app_state::AppState};
 
 use axum::Router;
 use clap::Parser;
@@ -15,12 +15,9 @@ mod cli;
 async fn main() {
     let args = cli::Args::parse();
 
-    tracing_subscriber::fmt()
-        // TODO: Add a argument to the cli tool to change the log level.
-        .with_max_level(args.log)
-        .init();
+    tracing_subscriber::fmt().with_max_level(args.log).init();
 
-    let state = server::app_state::AppState::default();
+    let state = AppState::default();
 
     let address = SocketAddr::new(Ipv4Addr::LOCALHOST.into(), args.port);
 
@@ -35,8 +32,7 @@ async fn main() {
     let static_dir = ServeDir::new("static");
     let routes = Router::new()
         .with_state(state.clone())
-        .nest("/api/login", server::login::routes(state.clone()))
-        .nest("/api/display", server::display::routes(state.clone()))
+        .nest("/api/", server::api::routes(state.clone()))
         .fallback_service(static_dir)
         .layer(TraceLayer::new_for_http());
 
@@ -60,7 +56,7 @@ async fn main() {
 //     InvalidJsonResponse(#[from] reqwest::Error),
 // }
 
-async fn run_matches(_state: server::app_state::AppState) {
+async fn run_matches(_state: AppState) {
     loop {
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     }
