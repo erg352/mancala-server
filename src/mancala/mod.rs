@@ -1,6 +1,6 @@
-use reqwest::Client;
 use serde::Serialize;
 
+pub mod play_match;
 mod tests;
 
 #[derive(Clone, Copy, Serialize, Debug, PartialEq)]
@@ -45,6 +45,20 @@ impl Game {
             std::slice::from_raw_parts(self.boards.as_ptr() as *const u8, 12)
         });
         u128::from_ne_bytes(buffer) == 0
+    }
+
+    pub fn is_move_valid(&self, player: u8, attempted_move: u8) -> bool {
+        if self.boards[player as usize].is_empty() {
+            if !(6..12).contains(&attempted_move) {
+                false
+            } else {
+                self.boards[1 - player as usize].0[attempted_move as usize - 6] != 0
+            }
+        } else if !(0..6).contains(&attempted_move) {
+            false
+        } else {
+            self.boards[player as usize].0[attempted_move as usize] != 0
+        }
     }
 
     #[inline]
@@ -106,36 +120,5 @@ impl Game {
         }
 
         1 - player
-    }
-}
-
-impl Game {
-    fn to_json(&self, player: usize) -> String {
-        debug_assert!(player < 2);
-
-        #[derive(Serialize)]
-        struct SerializableGame {
-            boards: [Board; 2],
-            points: [u8; 2],
-        }
-
-        serde_json::to_string(&SerializableGame {
-            boards: [self.boards[player], self.boards[1 - player]],
-            points: [self.points[player], self.points[1 - player]],
-        })
-        .unwrap()
-    }
-
-    pub async fn send_game_to_player(&self, client: Client, player: usize, port: u16) {
-        debug_assert!(player < 2);
-
-        let serialized = self.to_json(player);
-        let _response = client
-            .get(format!("localhost:{port}/next_move"))
-            .body(serialized)
-            .header(reqwest::header::CONTENT_TYPE, "application/json")
-            .send()
-            .await
-            .unwrap();
     }
 }
