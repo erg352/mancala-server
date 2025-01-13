@@ -33,7 +33,7 @@ pub async fn play_match(client: Client, players: impl Into<[SocketAddr; 2]>) -> 
                 Err(PlayerResponseError::RequestError(_)) => {
                     connection_retries -= 1;
                     if connection_retries == 0 {
-                        return Winner::ByDisqualification(1 - current_player as u8);
+                        return Winner::ByDisqualification(1 - current_player as u8, true);
                     }
                 }
 
@@ -45,7 +45,7 @@ pub async fn play_match(client: Client, players: impl Into<[SocketAddr; 2]>) -> 
                     querying_retries -= 1;
 
                     if querying_retries == 0 {
-                        return Winner::ByDisqualification(1 - current_player as u8);
+                        return Winner::ByDisqualification(1 - current_player as u8, false);
                     }
                 }
             }
@@ -70,7 +70,7 @@ pub async fn play_match(client: Client, players: impl Into<[SocketAddr; 2]>) -> 
 }
 
 pub enum Winner {
-    ByDisqualification(u8),
+    ByDisqualification(u8, bool),
     FairAndSquare(u8, u8),
     Tie,
 }
