@@ -6,6 +6,8 @@ use thiserror::Error;
 
 use super::{Board, Game};
 
+/// Plays an entire match of mancala between two players, and returns information about
+/// who won (if anyone won), in what manner and by how much.
 pub async fn play_match(client: Client, players: impl Into<[SocketAddr; 2]>) -> Winner {
     let players = players.into();
 
@@ -69,9 +71,21 @@ pub async fn play_match(client: Client, players: impl Into<[SocketAddr; 2]>) -> 
     }
 }
 
+/// Summarizes the end of a mancala match between two bots.
 pub enum Winner {
+    /// One of the bots was unable to communicate with the server either
+    /// because it has disconnected, or because it was unable to send back
+    /// appropriate data. Thus the other bot won by disqualification.
     ByDisqualification(u8, bool),
+
+    /// Both bots played correctly until the end of the game, but one played
+    /// better than the other. The first paramter describes which player won
+    /// (the first or the second) and the second paramter describles by how much
+    /// (the difference of score between the winner and the loser in absolute value).
     FairAndSquare(u8, u8),
+
+    /// Both bots played correctly until the end of the game, but when tallying up the
+    /// scores, they both had the same amount of points and thus the game became a tie.
     Tie,
 }
 

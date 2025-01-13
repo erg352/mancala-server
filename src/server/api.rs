@@ -6,7 +6,7 @@ mod display;
 mod login;
 mod register;
 
-#[allow(unused)]
+/// Function that creates the router for the server's api.
 pub fn routes(state: AppState) -> Router {
     Router::new()
         .route("/register", get(register::register_bot))
