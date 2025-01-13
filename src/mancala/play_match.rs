@@ -6,9 +6,6 @@ use thiserror::Error;
 
 use super::{Board, Game};
 
-const CONNECTION_RETRY_COUNT: u8 = 8;
-const QUERY_RETRY_COUNT: u8 = 2;
-
 pub async fn play_match(client: Client, players: impl Into<[SocketAddr; 2]>) -> Winner {
     let players = players.into();
 
@@ -16,6 +13,9 @@ pub async fn play_match(client: Client, players: impl Into<[SocketAddr; 2]>) -> 
     let mut current_player = 0;
 
     while !game.is_finished() {
+        const CONNECTION_RETRY_COUNT: u8 = 8;
+        const QUERY_RETRY_COUNT: u8 = 2;
+
         let mut connection_retries = CONNECTION_RETRY_COUNT;
         let mut querying_retries = QUERY_RETRY_COUNT;
         let player_move = loop {

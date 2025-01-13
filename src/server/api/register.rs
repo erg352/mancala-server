@@ -40,7 +40,7 @@ pub(super) async fn register_bot(
     let hashed_password = argon2.hash_password(password, &salt)?.to_string();
 
     connection.execute(
-        "INSERT INTO bots (name, password, elo) VALUES (?1, ?2, 0)",
+        "INSERT INTO bots (name, password, elo) VALUES (?1, ?2, 1000)",
         params![payload.name, hashed_password],
     )?;
 
