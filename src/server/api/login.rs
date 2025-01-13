@@ -73,13 +73,12 @@ impl From<argon2::password_hash::Error> for LoginBotError {
 
 impl IntoResponse for LoginBotError {
     fn into_response(self) -> axum::response::Response {
-        let body = match self {
-            Self::InvalidName => "bot is not registered",
-            Self::InvalidPassword => "password is incorrect",
-            Self::DatabaseError(_) => "",
-            Self::HasherError(_) => "password is corrupted",
-        };
-
-        (StatusCode::INTERNAL_SERVER_ERROR, body).into_response()
+        match self {
+            Self::InvalidName => (StatusCode::UNAUTHORIZED, "invalid username"),
+            Self::InvalidPassword => (StatusCode::UNAUTHORIZED, "invalid password"),
+            Self::DatabaseError(_) => (StatusCode::INTERNAL_SERVER_ERROR, ""),
+            Self::HasherError(_) => (StatusCode::INTERNAL_SERVER_ERROR, "password is corrupted"),
+        }
+        .into_response()
     }
 }
