@@ -1,48 +1,29 @@
 use std::{
-    net::SocketAddr,
+    path::Path,
     sync::{Arc, Mutex},
 };
 
 use reqwest::Client;
 
-use crate::mancala::Game;
-
-pub struct Match {
-    pub game: Game,
-    pub bots: (Bot, Bot),
-}
-
-#[derive(Clone)]
-#[allow(unused)]
-pub struct Bot {
-    name: Arc<str>,
-    address: SocketAddr,
-}
-
 #[derive(Clone)]
 pub struct AppState {
-    pub bots: Arc<Mutex<Vec<Bot>>>,
-    pub matches: Arc<Mutex<Vec<Mutex<Match>>>>,
-
     // For sending messages to clients
     pub client: Client,
 
     pub database: Arc<Mutex<rusqlite::Connection>>,
 }
 
-impl Default for AppState {
-    fn default() -> Self {
+impl AppState {
+    pub fn new(database_path: &Path) -> Self {
         Self {
-            bots: Default::default(),
-            matches: Default::default(),
             client: Default::default(),
-            database: Arc::new(Mutex::new(open_database())),
+            database: Arc::new(Mutex::new(open_database(database_path))),
         }
     }
 }
 
-fn open_database() -> rusqlite::Connection {
-    let database = rusqlite::Connection::open("data.db").unwrap();
+fn open_database(path: &Path) -> rusqlite::Connection {
+    let database = rusqlite::Connection::open(path).unwrap();
 
     let query = "
             CREATE TABLE IF NOT EXISTS bots (

@@ -26,7 +26,7 @@ async fn main() -> EyreResult<()> {
     // The app state contains all of the data for the application. It is trivialy cloneable,
     // as all of it's data is in Arcs or other smart pointers. This cloneability is needed for
     // axum and the matchmaker.
-    let state = AppState::default();
+    let state = AppState::new(&args.database);
 
     // We are using TCP instead of UDP even if we consider the network to be reliable (and in the
     // offchance it isn't, there should be enough guardrails to prevent undesireable behavior)
