@@ -21,7 +21,7 @@ pub(super) async fn register_bot(
     State(state): State<AppState>,
     Query(payload): Query<RegisterBotPayload>,
 ) -> Result<(), RegisterBotError> {
-    let connection = state.database.lock().unwrap();
+    let connection = state.database.lock().await;
 
     let column_count: usize = connection.query_row(
         "SELECT COUNT(*) FROM bots WHERE name = ?1",

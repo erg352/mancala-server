@@ -1,6 +1,6 @@
 use std::net::SocketAddr;
 
-use crate::server::app_state::AppState;
+use crate::server::app_state::{AppState, Bot};
 
 use argon2::{Argon2, PasswordHash, PasswordVerifier};
 use axum::{
@@ -17,19 +17,28 @@ use thiserror::Error;
 pub(super) async fn login(
     State(state): State<AppState>,
     Query(payload): Query<LoginBotPayload>,
-    ConnectInfo(_address): ConnectInfo<SocketAddr>,
+    ConnectInfo(address): ConnectInfo<SocketAddr>,
 ) -> Result<(), LoginBotError> {
-    let connection = state.database.lock().unwrap();
+    let connection = state.database.lock().await;
 
-    let query: Option<String> = connection
+    let (bot, hashed_password): (Bot, String) = connection
         .query_row(
-            "SELECT password FROM bots WHERE name = ?1",
+            "SELECT id, name, elo, password FROM bots WHERE name = ?1",
             params![payload.name],
-            |row| row.get(0),
+            |row| {
+                Ok((
+                    Bot {
+                        id: row.get(0)?,
+                        name: row.get(1)?,
+                        elo: row.get(2)?,
+                        address,
+                    },
+                    row.get(3)?,
+                ))
+            },
         )
-        .optional()?;
-
-    let hashed_password = query.ok_or(LoginBotError::InvalidName)?;
+        .optional()?
+        .ok_or(LoginBotError::InvalidName)?;
 
     let parsed_hash = PasswordHash::new(&hashed_password)?;
     if Argon2::default()
@@ -39,6 +48,8 @@ pub(super) async fn login(
     {
         return Err(LoginBotError::InvalidPassword);
     }
+
+    state.pending_bots.lock().await.push(bot);
 
     Ok(())
 }

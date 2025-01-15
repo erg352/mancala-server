@@ -4,7 +4,7 @@ use crate::server::app_state::AppState;
 
 #[debug_handler]
 pub(super) async fn show_bots(State(state): State<AppState>) -> Json<String> {
-    let connection = state.database.lock().unwrap();
+    let connection = state.database.lock().await;
 
     let mut query = connection
         .prepare("SELECT name, elo FROM bots ORDER BY elo DESC")

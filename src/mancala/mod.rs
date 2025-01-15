@@ -50,7 +50,7 @@ impl From<Board> for u64 {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Game {
     boards: [Board; 2],
     points: [u8; 2],

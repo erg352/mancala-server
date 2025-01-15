@@ -1,6 +1,9 @@
 use std::net::{Ipv4Addr, SocketAddr};
 
-use match_server::server::{self, app_state::AppState};
+use match_server::{
+    matchmaker::run_matches,
+    server::{self, app_state::AppState},
+};
 
 use axum::Router;
 use clap::Parser;
@@ -61,10 +64,4 @@ async fn main() -> EyreResult<()> {
     }
 
     Ok(())
-}
-
-async fn run_matches(_state: AppState) {
-    loop {
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-    }
 }
