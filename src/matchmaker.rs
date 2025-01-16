@@ -12,7 +12,7 @@ pub async fn run_matches(state: AppState) {
 
     loop {
         // We iterate through all of the pending bots whilst removing them from the pending
-        // bot array and have them match-make with each other bot.
+        // bot array and have them matchmake with each other bot.
 
         // We are dropping the lock to the pending bots early to avoid complications. (the cost
         // of the copy can be considered minimal given the small (if not 0) size of the
@@ -22,20 +22,22 @@ pub async fn run_matches(state: AppState) {
             lock.drain(..).collect()
         };
 
-        // We don't need to allocate any memory if there are no bots that are pending, so we don't
-        let other_bots = if pending_bots.is_empty() {
-            Vec::new()
-        } else {
-            state.connected_bots.lock().await.iter().cloned().collect()
-        };
+        // If there are no pending bots, there is no need to continue, so wait a bit and try it the
+        // next time around.
+        if pending_bots.is_empty() {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            continue;
+        }
+
+        // HACK: Unfortunately, I have not yet found a way to **not** perform a copy each time around
+        // whilst avoiding thread locking and other bugs. This should work for now, but should be
+        // looked at more seriously.
+        let other_bots: Vec<_> = state.connected_bots.lock().await.iter().cloned().collect();
 
         for bot_a in pending_bots {
             // We iterate through the whole list of current bots and setup the match between the
             // current pending bot and the already registered ones.
             for bot_b in other_bots.iter() {
-                // We clone the bot and the state to let the async closure take their ownership.
-                let state = state.clone();
-
                 // Each match is run async, as the better part of the time taken to run a match
                 // consists of HTTP communication and awaiting the bot's response.
                 // We are also running two matches, one where the first player is bot_a and one
@@ -87,19 +89,6 @@ async fn handle_match_ending_fair_and_square(state: AppState, winner: Bot, loser
 
     let connection = state.database.lock().await;
 
-    let handle_database_output = |result: rusqlite::Result<usize>| match result {
-        Ok(updated_row_count) if updated_row_count != 1 => {
-            error!(
-                "When changing the elo of a match's winner, {} rows where updated instead of 1",
-                updated_row_count
-            );
-        }
-        Err(error) => {
-            error!("Error encountered when updating player's elo: {}", error);
-        }
-        _ => {}
-    };
-
     handle_database_output(connection.execute(
         "UPDATE bots SET elo = ?1 WHERE id = ?2",
         (winner_elo, winner.id),
@@ -109,6 +98,21 @@ async fn handle_match_ending_fair_and_square(state: AppState, winner: Bot, loser
         "UPDATE bots SET elo = ?1 WHERE id = ?2",
         (loser_elo, loser.id),
     ));
+
+    fn handle_database_output(result: rusqlite::Result<usize>) {
+        match result {
+            Ok(updated_row_count) if updated_row_count != 1 => {
+                error!(
+                    "When changing the elo of a match's winner, {} rows where updated instead of 1",
+                    updated_row_count
+                );
+            }
+            Err(error) => {
+                error!("Error encountered when updating player's elo: {}", error);
+            }
+            _ => {}
+        };
+    }
 }
 
 /// Handles what should be done when too bots play a match and end up scoring the
