@@ -6,7 +6,7 @@ use reqwest::Client;
 
 use crate::mancala::Game;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Bot {
     pub name: Arc<str>,
     pub id: u16,
