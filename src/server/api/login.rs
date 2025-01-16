@@ -12,6 +12,7 @@ use reqwest::StatusCode;
 use rusqlite::{params, OptionalExtension};
 use serde::Deserialize;
 use thiserror::Error;
+use tracing::warn;
 
 #[debug_handler]
 pub(super) async fn login(
@@ -47,6 +48,16 @@ pub(super) async fn login(
         .is_none()
     {
         return Err(LoginBotError::InvalidPassword);
+    }
+
+    if state.pending_bots.lock().await.contains(&bot)
+        || state.connected_bots.lock().await.contains(&bot)
+    {
+        warn!(
+            "Bot {} attempted to login whilst already being logged in.",
+            bot.name
+        );
+        return Ok(());
     }
 
     state.pending_bots.lock().await.push(bot);

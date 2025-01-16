@@ -1,6 +1,5 @@
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 
-use tokio::sync::Mutex;
 use tracing::{error, trace, warn};
 
 use crate::{
@@ -10,8 +9,6 @@ use crate::{
 
 pub async fn run_matches(state: AppState) {
     trace!("Started the matchmaking task.");
-    // We keep track in memory to the list of all connected bots.
-    let connected_bots: Arc<Mutex<Vec<Bot>>> = Arc::new(Mutex::new(Vec::new()));
 
     loop {
         // We iterate through all of the pending bots whilst removing them from the pending
@@ -29,7 +26,7 @@ pub async fn run_matches(state: AppState) {
         let other_bots = if pending_bots.is_empty() {
             Vec::new()
         } else {
-            connected_bots.lock().await.clone()
+            state.connected_bots.lock().await.iter().cloned().collect()
         };
 
         for bot_a in pending_bots {
@@ -49,7 +46,7 @@ pub async fn run_matches(state: AppState) {
 
             // We add the new bot after spawning all tokio tasks so as to not have the chance of
             // a bot fighting against itself :p.
-            connected_bots.lock().await.push(bot_a.clone());
+            state.connected_bots.lock().await.insert(bot_a.clone());
         }
         // Sleep for some time, as there is no need to run this code ad-nauseum given bots won't
         // connect frequently (and even if they do, them waiting a second for their matches to

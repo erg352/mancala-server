@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, path::Path, sync::Arc};
+use std::{collections::HashSet, hash::Hash, net::SocketAddr, path::Path, sync::Arc};
 
 use tokio::sync::Mutex;
 
@@ -12,6 +12,20 @@ pub struct Bot {
     pub id: u16,
     pub elo: u16,
     pub address: SocketAddr,
+}
+
+impl PartialEq for Bot {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Bot {}
+
+impl Hash for Bot {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
 }
 
 #[derive(Clone)]
@@ -28,6 +42,7 @@ pub struct AppState {
     pub database: Arc<Mutex<rusqlite::Connection>>,
 
     pub pending_bots: Arc<Mutex<Vec<Bot>>>,
+    pub connected_bots: Arc<Mutex<HashSet<Bot>>>,
 }
 
 impl AppState {
@@ -36,6 +51,7 @@ impl AppState {
             client: Default::default(),
             database: Arc::new(Mutex::new(open_database(database_path))),
             pending_bots: Arc::new(Mutex::new(Vec::new())),
+            connected_bots: Arc::new(Mutex::new(HashSet::new())),
         }
     }
 }
