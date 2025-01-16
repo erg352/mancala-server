@@ -123,13 +123,23 @@ async fn handle_match_ending_tie(_state: AppState, _bot_a: Bot, _bot_b: Bot) {
 
 /// Handles what should happen when a bot loses by disqualification
 async fn handle_match_ending_disqualification(
-    _state: AppState,
-    _disqualified_bot: Bot,
+    state: AppState,
+    disqualified_bot: Bot,
     should_kick: bool,
 ) {
     if !should_kick {
         return;
     }
 
-    warn!("A bot should be kicked, but wasn't due to the codebase being WIP.");
+    while !state.connected_bots.lock().await.remove(&disqualified_bot) {
+        // The disqualified bot was not present in the list of connected bots. (maybe they are
+        // still on the pending_bot list?)
+        warn!(
+            "Failed to kick bot named {} due to it not being found in the connected_bots set, retrying soon.",
+            disqualified_bot.name
+        );
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+
+    trace!("Kicked out bot {}", disqualified_bot.name);
 }
