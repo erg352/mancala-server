@@ -3,6 +3,7 @@ use std::net::SocketAddr;
 use reqwest::Client;
 use serde::Serialize;
 use thiserror::Error;
+use tracing::error;
 
 use super::{Board, Game};
 
@@ -49,6 +50,11 @@ pub async fn play_match(client: Client, players: impl Into<[SocketAddr; 2]>) -> 
                     if querying_retries == 0 {
                         return Winner::ByDisqualification(1 - current_player as u8, false);
                     }
+                }
+
+                Err(PlayerResponseError::CouldNotSerialize(error)) => {
+                    error!("Could not serialize the the board to send it to the player due to following error: \"{error}\", aborting instead and resoliving match in a tie.");
+                    return Winner::Tie;
                 }
             }
         };
