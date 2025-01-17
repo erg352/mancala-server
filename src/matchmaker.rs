@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+const WAIT_TIME: Duration = Duration::from_secs(1);
+
 use tracing::{error, trace, warn};
 
 use crate::{
@@ -25,7 +27,7 @@ pub async fn run_matches(state: AppState) {
         // If there are no pending bots, there is no need to continue, so wait a bit and try it the
         // next time around.
         if pending_bots.is_empty() {
-            tokio::time::sleep(Duration::from_secs(1)).await;
+            tokio::time::sleep(WAIT_TIME).await;
             continue;
         }
 
@@ -53,7 +55,7 @@ pub async fn run_matches(state: AppState) {
         // Sleep for some time, as there is no need to run this code ad-nauseum given bots won't
         // connect frequently (and even if they do, them waiting a second for their matches to
         // start isn't the end of the world).
-        tokio::time::sleep(Duration::from_secs(1)).await;
+        tokio::time::sleep(WAIT_TIME).await;
     }
 }
 
@@ -133,12 +135,12 @@ async fn handle_match_ending_disqualification(
 
     while !state.connected_bots.lock().await.remove(&disqualified_bot) {
         // The disqualified bot was not present in the list of connected bots. (maybe they are
-        // still on the pending_bot list?)
+        // still on the pending bot list?)
         warn!(
             "Failed to kick bot named {} due to it not being found in the connected_bots set, retrying soon.",
             disqualified_bot.name
         );
-        tokio::time::sleep(Duration::from_secs(1)).await;
+        tokio::time::sleep(WAIT_TIME).await;
     }
 
     trace!("Kicked out bot {}", disqualified_bot.name);
