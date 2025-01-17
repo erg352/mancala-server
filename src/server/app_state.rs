@@ -3,6 +3,7 @@ use std::{collections::HashSet, hash::Hash, net::SocketAddr, path::Path, sync::A
 use tokio::sync::Mutex;
 
 use reqwest::Client;
+use tracing::error;
 
 use crate::mancala::Game;
 
@@ -47,17 +48,24 @@ pub struct AppState {
 
 impl AppState {
     pub fn new(database_path: &Path) -> Self {
+        let database = match open_database(database_path) {
+            Ok(database) => database,
+            Err(error) => {
+                error!("Could not load in database due to following error: \"{error}\", shutting down server.");
+                std::process::exit(1);
+            }
+        };
         Self {
             client: Default::default(),
-            database: Arc::new(Mutex::new(open_database(database_path))),
+            database: Arc::new(Mutex::new(database)),
             pending_bots: Arc::new(Mutex::new(Vec::new())),
             connected_bots: Arc::new(Mutex::new(HashSet::new())),
         }
     }
 }
 
-fn open_database(path: &Path) -> rusqlite::Connection {
-    let database = rusqlite::Connection::open(path).unwrap();
+fn open_database(path: &Path) -> rusqlite::Result<rusqlite::Connection> {
+    let database = rusqlite::Connection::open(path)?;
 
     let query = "
             CREATE TABLE IF NOT EXISTS bots (
@@ -67,7 +75,7 @@ fn open_database(path: &Path) -> rusqlite::Connection {
                 elo INTEGER
             )
         ";
-    database.execute(query, []).unwrap();
+    database.execute(query, [])?;
 
-    database
+    Ok(database)
 }

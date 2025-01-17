@@ -74,12 +74,11 @@ impl From<argon2::password_hash::Error> for RegisterBotError {
 
 impl IntoResponse for RegisterBotError {
     fn into_response(self) -> axum::response::Response {
-        let body = match self {
-            Self::NameInUse => "name is already taken",
-            Self::DatabaseError(_) => "",
-            Self::HasherError(_) => "",
-        };
-
-        (StatusCode::INTERNAL_SERVER_ERROR, body).into_response()
+        match self {
+            Self::NameInUse => (StatusCode::UNAUTHORIZED, "name is already taken"),
+            Self::DatabaseError(_) => (StatusCode::INTERNAL_SERVER_ERROR, ""),
+            Self::HasherError(_) => (StatusCode::INTERNAL_SERVER_ERROR, ""),
+        }
+        .into_response()
     }
 }

@@ -90,7 +90,7 @@ pub enum Winner {
 }
 
 impl Game {
-    fn to_json(&self, player: usize) -> String {
+    fn to_json(&self, player: usize) -> Result<String, PlayerResponseError> {
         debug_assert!(player < 2);
 
         #[derive(Serialize)]
@@ -99,11 +99,10 @@ impl Game {
             points: [u8; 2],
         }
 
-        serde_json::to_string(&SerializableGame {
+        Ok(serde_json::to_string(&SerializableGame {
             boards: [self.boards[player], self.boards[1 - player]],
             points: [self.points[player], self.points[1 - player]],
-        })
-        .unwrap()
+        })?)
     }
 
     async fn send_to_player(
@@ -114,7 +113,7 @@ impl Game {
     ) -> Result<u8, PlayerResponseError> {
         debug_assert!(player < 2);
 
-        let serialized = self.to_json(player);
+        let serialized = self.to_json(player)?;
 
         let response = client
             .get(format!("{address}/next_move"))
@@ -140,4 +139,7 @@ enum PlayerResponseError {
 
     #[error("invalid response from player")]
     InvalidResponse(reqwest::Error),
+
+    #[error("failed to serialize board due to error: {0}")]
+    CouldNotSerialize(#[from] serde_json::Error),
 }
