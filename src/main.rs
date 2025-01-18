@@ -49,6 +49,7 @@ async fn main() -> EyreResult<()> {
         // This is a different router, so we put it after the with_state call, but we still want to
         // pass in the app state.
         .nest("/api/", server::api::routes(state.clone()))
+        .fallback_service(tower_http::services::ServeDir::new(args.static_routes))
         // The trace layer should be applied to all routes from root to the nested routes, hence
         // it's pace after all routes have been declared. (middle ware is applied from bottom to
         // top)

@@ -18,4 +18,7 @@ pub struct Args {
     /// The provided value is case insensitive.
     #[arg(short, long, default_value_t = tracing::Level::WARN)]
     pub log: tracing::Level,
+
+    #[arg(short, long)]
+    pub static_routes: PathBuf,
 }
