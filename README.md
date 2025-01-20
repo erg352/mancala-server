@@ -9,8 +9,13 @@ to easily build and run the program. This is not strictly speaking required, and
 methods of building and running are described in the "Running" section.
 - [sqlite](https://www.sqlite.org/index.html): This is required, as all persistant
 data will be stored in a sqlite database.
-- [trunk]("https://trunkrs.dev/"): This is optional, and must be present for the frontend
-to be built.
+- [rust](https://www.rust-lang.org/): The rust compiler, it's build tool cargo
+and several other bundled binaries are required to run the server. This project is built
+in rust, and this repo only contains the source code, so it can not be used without this
+dependency.
+- [trunk](https://trunkrs.dev/): This is optional, and must be present for the frontend
+to be built. It also requires rust and cargo to be installed on your machine, so install this
+after rust.
 
 ## Installation
 
