@@ -1,3 +1,4 @@
 [submodule "frontend"]
 	path = frontend
 	url = git@github.com:erg352/mancala-server-frontend.git
+	branch = develop

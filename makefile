@@ -2,16 +2,19 @@
 .PHONY: build-release
 .PHONY: run-debug
 .PHONY: run-release
+.PHONY: format
+
+format:
+	cargo fmt
+	(cd frontend && leptosfmt ./**/.rs)
 
 build-debug:
 	cargo build
 	(cd frontend && trunk build)
 
-
 build-release:
 	cargo build --release
 	(cd frontend && trunk build --release)
-
 
 run-debug:
 	make build-debug
