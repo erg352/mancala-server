@@ -59,8 +59,7 @@ pub(super) async fn login(
     let parsed_hash = PasswordHash::new(&hashed_password)?;
     if Argon2::default()
         .verify_password(payload.password.as_bytes(), &parsed_hash)
-        .ok()
-        .is_none()
+        .is_err()
     {
         return Err(LoginBotError::InvalidPassword);
     }
