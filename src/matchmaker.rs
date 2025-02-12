@@ -65,7 +65,16 @@ async fn launch_match(state: AppState, bot_a: Bot, bot_b: Bot) {
         bot_a.name.clone(),
         bot_b.name.clone()
     );
-    match play_match(state.client.clone(), [bot_a.address, bot_b.address]).await {
+
+    let Some(ref bot_a_socket) = bot_a.socket else {
+        return;
+    };
+
+    let Some(ref bot_b_socket) = bot_b.socket else {
+        return;
+    };
+
+    match play_match([bot_a_socket.clone(), bot_b_socket.clone()]).await {
         Winner::Tie => handle_match_ending_tie(state, bot_a, bot_b).await,
         Winner::ByDisqualification(bot_index, should_kick) => {
             let bot = if bot_index == 0 { bot_a } else { bot_b };

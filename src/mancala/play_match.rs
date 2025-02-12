@@ -1,15 +1,16 @@
-use std::net::SocketAddr;
+use std::sync::Arc;
 
-use reqwest::Client;
-use serde::Serialize;
+use axum::extract::ws::{Message, WebSocket};
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use tokio::sync::Mutex;
 use tracing::error;
 
 use super::{Board, Game};
 
 /// Plays an entire match of mancala between two players, and returns information about
 /// who won (if anyone won), in what manner and by how much.
-pub async fn play_match(client: Client, players: impl Into<[SocketAddr; 2]>) -> Winner {
+pub async fn play_match(players: impl Into<[Arc<Mutex<WebSocket>>; 2]>) -> Winner {
     let players = players.into();
 
     let mut game = Game::default();
@@ -23,24 +24,26 @@ pub async fn play_match(client: Client, players: impl Into<[SocketAddr; 2]>) -> 
         let mut querying_retries = QUERY_RETRY_COUNT;
         let player_move = loop {
             match game
-                .send_to_player(&client, current_player, players[current_player])
+                .send_to_player(current_player, players[current_player].clone())
                 .await
             {
                 Ok(response) => {
+                    let response = response.value;
                     if game.is_move_valid(current_player as u8, response) {
                         break response;
                     }
                     querying_retries -= 1;
                 }
 
-                Err(PlayerResponseError::RequestError(_)) => {
-                    connection_retries -= 1;
-                    if connection_retries == 0 {
-                        return Winner::ByDisqualification(1 - current_player as u8, true);
-                    }
-                }
-
-                Err(PlayerResponseError::InvalidResponse(_)) => {
+                // Err(PlayerResponseError::RequestError(e)) => {
+                //     trace!("Request Error: {e}");
+                //
+                //     connection_retries -= 1;
+                //     if connection_retries == 0 {
+                //         return Winner::ByDisqualification(1 - current_player as u8, true);
+                //     }
+                // }
+                Err(PlayerResponseError::InvalidResponse) => {
                     // We managed to connect to the player, so might as well give
                     // them the benefit of the doubt
                     connection_retries = QUERY_RETRY_COUNT;
@@ -55,6 +58,15 @@ pub async fn play_match(client: Client, players: impl Into<[SocketAddr; 2]>) -> 
                 Err(PlayerResponseError::CouldNotSerialize(error)) => {
                     error!("Could not serialize the the board to send it to the player due to following error: \"{error}\", aborting instead and resoliving match in a tie.");
                     return Winner::Tie;
+                }
+
+                Err(PlayerResponseError::SendFailed(_))
+                | Err(PlayerResponseError::ReceiveFailed(_))
+                | Err(PlayerResponseError::DidNotReceiveResponse) => {
+                    connection_retries -= 1;
+                    if connection_retries == 0 {
+                        return Winner::ByDisqualification(1 - current_player as u8, true);
+                    }
                 }
             }
         };
@@ -113,38 +125,54 @@ impl Game {
 
     async fn send_to_player(
         &self,
-        client: &Client,
         player: usize,
-        address: SocketAddr,
-    ) -> Result<u8, PlayerResponseError> {
+        socket: Arc<Mutex<WebSocket>>,
+    ) -> Result<PlayerResponse, PlayerResponseError> {
         debug_assert!(player < 2);
 
         let serialized = self.to_json(player)?;
 
-        let response = client
-            .get(format!("{address}/next_move"))
-            .body(serialized)
-            .header(reqwest::header::CONTENT_TYPE, "application/json")
-            .send()
-            .await
-            .map_err(PlayerResponseError::RequestError)?;
+        let mut socket = socket.lock().await;
 
-        let value = response
-            .json()
+        socket
+            .send(serialized.into())
             .await
-            .map_err(PlayerResponseError::InvalidResponse)?;
+            .map_err(|e| PlayerResponseError::SendFailed(e.into()))?;
 
-        Ok(value)
+        let response = socket
+            .recv()
+            .await
+            .map(|e| e.map_err(|e| PlayerResponseError::ReceiveFailed(e.into())))
+            .ok_or(PlayerResponseError::DidNotReceiveResponse)??;
+
+        Ok(match response {
+            Message::Text(text) => serde_json::from_str::<PlayerResponse>(&text),
+            Message::Binary(_) | Message::Ping(_) | Message::Pong(_) => {
+                return Err(PlayerResponseError::InvalidResponse)
+            }
+            Message::Close(_close_frame) => todo!("handle client closing the web socket"),
+        }?)
     }
+}
+
+#[derive(Deserialize)]
+pub struct PlayerResponse {
+    pub value: u8,
 }
 
 #[derive(Error, Debug)]
 enum PlayerResponseError {
-    #[error("error encountered when querying player: {0}")]
-    RequestError(reqwest::Error),
+    #[error("could not send information to the player due to following error: {0}")]
+    SendFailed(Box<dyn std::error::Error>),
+
+    #[error("failed to retreive data from player due to following error: {0}")]
+    ReceiveFailed(Box<dyn std::error::Error>),
+
+    #[error("did not receive a response from the player")]
+    DidNotReceiveResponse,
 
     #[error("invalid response from player")]
-    InvalidResponse(reqwest::Error),
+    InvalidResponse,
 
     #[error("failed to serialize board due to error: {0}")]
     CouldNotSerialize(#[from] serde_json::Error),

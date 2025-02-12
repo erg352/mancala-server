@@ -1,5 +1,6 @@
-use std::{collections::HashSet, hash::Hash, net::SocketAddr, path::Path, sync::Arc};
+use std::{collections::HashSet, hash::Hash, path::Path, sync::Arc};
 
+use axum::extract::ws::WebSocket;
 use tokio::sync::Mutex;
 
 use reqwest::Client;
@@ -12,16 +13,17 @@ pub struct Bot {
     pub name: Arc<str>,
     pub id: u16,
     pub elo: u16,
-    pub address: SocketAddr,
+    pub socket: Option<Arc<Mutex<WebSocket>>>,
+    pub secret: Arc<[u8]>,
 }
+
+impl Eq for Bot {}
 
 impl PartialEq for Bot {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
     }
 }
-
-impl Eq for Bot {}
 
 impl Hash for Bot {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {

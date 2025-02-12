@@ -1,7 +1,7 @@
 use crate::server::app_state::AppState;
 
 use argon2::{
-    password_hash::{PasswordHasher, SaltString},
+    password_hash::{rand_core::OsRng, PasswordHasher, SaltString},
     Argon2,
 };
 use axum::{
@@ -10,7 +10,6 @@ use axum::{
     response::IntoResponse,
 };
 
-use rand::rngs::OsRng;
 use reqwest::StatusCode;
 use rusqlite::params;
 use serde::Deserialize;

@@ -22,4 +22,4 @@ run-debug:
 
 run-release:
 	make build-release
-	cargo run release -- --port 8080 --database data.db --static-routes frontend/dist --log warn
+	cargo run --release -- --port 8080 --database data.db --static-routes frontend/dist
