@@ -35,14 +35,6 @@ pub async fn play_match(players: impl Into<[Arc<Mutex<WebSocket>>; 2]>) -> Winne
                     querying_retries -= 1;
                 }
 
-                // Err(PlayerResponseError::RequestError(e)) => {
-                //     trace!("Request Error: {e}");
-                //
-                //     connection_retries -= 1;
-                //     if connection_retries == 0 {
-                //         return Winner::ByDisqualification(1 - current_player as u8, true);
-                //     }
-                // }
                 Err(PlayerResponseError::InvalidResponse) => {
                     // We managed to connect to the player, so might as well give
                     // them the benefit of the doubt
@@ -55,11 +47,6 @@ pub async fn play_match(players: impl Into<[Arc<Mutex<WebSocket>>; 2]>) -> Winne
                     }
                 }
 
-                Err(PlayerResponseError::CouldNotSerialize(error)) => {
-                    error!("Could not serialize the the board to send it to the player due to following error: \"{error}\", aborting instead and resoliving match in a tie.");
-                    return Winner::Tie;
-                }
-
                 Err(PlayerResponseError::SendFailed(_))
                 | Err(PlayerResponseError::ReceiveFailed(_))
                 | Err(PlayerResponseError::DidNotReceiveResponse) => {
@@ -67,6 +54,11 @@ pub async fn play_match(players: impl Into<[Arc<Mutex<WebSocket>>; 2]>) -> Winne
                     if connection_retries == 0 {
                         return Winner::ByDisqualification(1 - current_player as u8, true);
                     }
+                }
+
+                Err(PlayerResponseError::CouldNotSerialize(error)) => {
+                    error!("Could not serialize the the board to send it to the player due to following error: \"{error}\", aborting instead and resoliving match in a tie.");
+                    return Winner::Tie;
                 }
             }
         };
